@@ -19,8 +19,9 @@ main :: proc() {
 	enemy_sprite := rl.LoadTexture("./assets/Enemies/Skeleton.png")
 	player := init_player(player_sprite)
 	enemies := init_enemies(enemy_sprite)
-	// camera: rl.Camera2D = {{0.0, 0.0}, {f32(player.position.x), f32(player.position.y)}, 0.0, 4.0}
-	// rl.BeginMode2D(camera)
+
+	camera := init_camera(player)
+
 	animations := init_animations()
 	enemy_animations := init_enemy_animations()
 	rl.SetTargetFPS(60)
@@ -30,12 +31,11 @@ main :: proc() {
 	defer rl.UnloadTexture(player_sprite)
 	defer rl.UnloadTexture(enemy_sprite)
 	defer write_level()
-	// defer rl.EndMode2D()
 
+	defer rl.EndMode2D()
 	for !rl.WindowShouldClose() {
-		editor_mode()
-
-		game_update(&player, &enemies, animations, enemy_animations)
+		editor_mode(&camera)
+		game_update(&player, &enemies, animations, enemy_animations, &camera)
 	}
 
 }
@@ -46,9 +46,11 @@ game_update :: proc(
 	enemies: ^[]Enemy,
 	animations: map[Animation_State]Animation,
 	enemy_animations: map[Animation_State]Animation,
+	camera: ^rl.Camera2D,
 ) -> bool {
-	draw()
-	draw_level()
+	draw(camera^)
+	draw_level(camera)
+	update_camera(player, camera)
 	draw_player(player^, animations)
 	draw_enemies(enemies, enemy_animations)
 	update_player(player, animations)
@@ -57,9 +59,10 @@ game_update :: proc(
 }
 
 
-draw :: proc() {
+draw :: proc(camera: rl.Camera2D) {
 	// rl.DrawTextureRec(player_sprite, frame_rect, player_position, rl.WHITE)
 
 	rl.ClearBackground(rl.BLACK)
+	rl.BeginMode2D(camera)
 	rl.EndDrawing()
 }

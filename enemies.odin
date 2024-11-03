@@ -3,16 +3,22 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 // can use the animation struct from the e 
+Aggro_Range :: struct {
+	radius:   f32,
+	position: rl.Vector2,
+}
 
 Enemy :: struct {
 	position:      rl.Vector2,
 	sprite_sheet:  rl.Texture2D,
 	direction:     Direction,
+	hp:            i32,
 	current_state: Animation_State,
 	current_frame: i32,
 	frame_counter: i32,
 	sprite_cols:   i32,
 	sprite_rows:   i32,
+	aggro_range:   Aggro_Range,
 }
 
 init_enemies :: proc(enemy_spritesheet: rl.Texture2D) -> []Enemy {
@@ -28,6 +34,8 @@ init_enemies :: proc(enemy_spritesheet: rl.Texture2D) -> []Enemy {
 		frame_counter = 0,
 		sprite_cols   = 6,
 		sprite_rows   = 10,
+		hp            = 1,
+		aggro_range   = {50, enemies[0].position},
 	}
 
 	enemies[1] = Enemy {
@@ -39,6 +47,8 @@ init_enemies :: proc(enemy_spritesheet: rl.Texture2D) -> []Enemy {
 		frame_counter = 0,
 		sprite_cols   = 6,
 		sprite_rows   = 10,
+		hp            = 1,
+		aggro_range   = {50, enemies[1].position},
 	}
 
 	return enemies
@@ -116,6 +126,7 @@ init_enemy_animations :: proc() -> map[Animation_State]Animation {
 
 
 update_enemies :: proc(enemies: []Enemy, animations: map[Animation_State]Animation) {
+	// write path finding and agro functionality 
 	for &enemy in enemies {
 
 		current_anim := animations[enemy.current_state]
@@ -159,7 +170,12 @@ draw_enemies :: proc(enemies: ^[]Enemy, animations: map[Animation_State]Animatio
 		case .NORTH, .SOUTH:
 			source.width = f32(frame_width)
 		}
-
+		rl.DrawCircle(
+			i32(e.aggro_range.position.x),
+			i32(e.aggro_range.position.y),
+			e.aggro_range.radius,
+			rl.RED,
+		)
 		rl.DrawTexturePro(e.sprite_sheet, source, dest, rl.Vector2{0, 0}, 0.0, rl.WHITE)
 
 	}

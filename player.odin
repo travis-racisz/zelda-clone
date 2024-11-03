@@ -174,8 +174,8 @@ draw_player :: proc(player: Player, animations: map[Animation_State]Animation) {
 	dest := rl.Rectangle {
 		x      = player.position.x,
 		y      = player.position.y,
-		width  = f32(frame_width) * 2,
-		height = f32(frame_height) * 2,
+		width  = f32(frame_width),
+		height = f32(frame_height),
 	}
 
 	// Adjust the source.width based on the player's direction

@@ -6,208 +6,165 @@ import "core:strings"
 import rl "vendor:raylib"
 
 Editor_State :: struct {
-	textures:            [dynamic]rl.Texture2D,
-	texture_names:       [dynamic]cstring, // Store names for debugging/saving
-	selected_texture:    int, // Index of currently selected texture
-	sidebar_width:       i32, // Width of the editor sidebar
-	tile_preview_size:   i32, // Size of texture previews in sidebar
-	tile_placement_size: i32, // Size of placed tiles in world
+	geometry:                [dynamic]rl.Rectangle,
+	selected_geometry:       int,
+	sidebar_width:           i32,
+	geometry_preview_size:   rl.Vector2,
+	geometry_placement_size: rl.Vector2,
 }
 
 Entity :: struct {
-	name:     cstring,
 	position: rl.Vector2,
+	size:     rl.Vector2,
 }
 
 Level :: struct {
 	entities: [dynamic]Entity,
 }
+
+level_background: rl.Texture2D
 level: Level
 editor_state: Editor_State
 edit_mode: bool = false
-// Initialize the editor
+
 init_editor :: proc() {
-	// Initialize dynamic arrays
-	editor_state.textures = make([dynamic]rl.Texture2D)
-	editor_state.texture_names = make([dynamic]cstring)
-	editor_state.selected_texture = -1
+	editor_state.geometry = make([dynamic]rl.Rectangle)
+	editor_state.selected_geometry = -1
 	editor_state.sidebar_width = 200
-	editor_state.tile_preview_size = 64
-	editor_state.tile_placement_size = 64
-
-	texture_files := []cstring {
-		"./assets/Tiles/Beach_Tile.png",
-		"./assets/Tiles/Cliff_Tile.png",
-		"./assets/Tiles/FarmLand_Tile.png",
-		"./assets/Tiles/Grass_Middle.png",
-	}
-
-	for file in texture_files {
-
-		texture := rl.LoadTexture(file)
-		append(&editor_state.textures, texture)
-		append(&editor_state.texture_names, file)
-	}
+	editor_state.geometry_preview_size = {64, 64}
+	editor_state.geometry_placement_size = {64, 64}
 }
 
-
-cleanup_editor :: proc() {
-	for texture in editor_state.textures {
-		rl.UnloadTexture(texture)
-	}
-	for name in editor_state.texture_names {
-		delete(name) // Clean up the cloned strings
-	}
-	delete(editor_state.textures)
-	delete(editor_state.texture_names)
-}
-
-draw_editor_sidebar :: proc() {
-	// Draw sidebar background
-	rl.DrawRectangle(0, 0, editor_state.sidebar_width, rl.GetScreenHeight(), rl.LIGHTGRAY)
-
-	// Draw texture selection menu
-	for texture, i in editor_state.textures {
-		pos_x := i32(10)
-		pos_y := i32(10 + i * (int(editor_state.tile_preview_size) + 10))
-
-		if i == editor_state.selected_texture {
-			rl.DrawRectangle(
-				pos_x - 5,
-				pos_y - 5,
-				editor_state.tile_preview_size + 10,
-				editor_state.tile_preview_size + 10,
-				rl.BLUE,
-			)
-		}
-
-		rl.DrawTexturePro(
-			texture,
-			rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)},
-			rl.Rectangle {
-				f32(pos_x),
-				f32(pos_y),
-				f32(editor_state.tile_preview_size),
-				f32(editor_state.tile_preview_size),
-			},
-			rl.Vector2{0, 0},
-			0,
-			rl.WHITE,
-		)
-
-
-		rl.DrawText(
-			editor_state.texture_names[i],
-			pos_x + editor_state.tile_preview_size + 10,
-			pos_y + editor_state.tile_preview_size / 2 - 10,
-			20,
-			rl.BLACK,
-		)
-	}
-}
-
-handle_editor_input :: proc() {
+get_cursor_world_pos :: proc(camera: ^rl.Camera2D) -> rl.Vector2 {
 	mouse_pos := rl.GetMousePosition()
 
-	// Handle clicking in the sidebar (texture selection)
+	// Get world space position relative to camera
+	world_pos := rl.GetScreenToWorld2D(mouse_pos, camera^)
+
+	// Snap to grid
+	grid_x :=
+		f32(int(world_pos.x) / int(editor_state.geometry_placement_size.x)) *
+		editor_state.geometry_placement_size.x
+	grid_y :=
+		f32(int(world_pos.y) / int(editor_state.geometry_placement_size.y)) *
+		editor_state.geometry_placement_size.y
+
+	return rl.Vector2{grid_x, grid_y}
+}
+
+draw_editor_sidebar :: proc(camera: ^rl.Camera2D) {
+	posX := i32(camera.target.x) - rl.GetScreenWidth() / 2
+	posY := i32(camera.target.y) - rl.GetScreenHeight() / 2
+	rl.DrawRectangle(posX, posY, editor_state.sidebar_width, rl.GetScreenHeight(), rl.LIGHTGRAY)
+
+	preview_rect := rl.Rectangle {
+		x      = f32(posX + 10),
+		y      = f32(posY + 10),
+		width  = editor_state.geometry_preview_size.x,
+		height = editor_state.geometry_preview_size.y,
+	}
+
+	if len(editor_state.geometry) == 0 {
+		append(&editor_state.geometry, preview_rect)
+	}
+
+	for geo, i in editor_state.geometry {
+		color := i == editor_state.selected_geometry ? rl.RED : rl.DARKGRAY
+		rl.DrawRectangleRec(geo, color)
+	}
+}
+
+handle_editor_input :: proc(camera: ^rl.Camera2D) {
+	if !edit_mode do return
+
+	mouse_pos := rl.GetMousePosition()
+	mouse_screen_x := mouse_pos.x - f32(editor_state.sidebar_width)
+
+	// Handle clicking in the sidebar
 	if mouse_pos.x < f32(editor_state.sidebar_width) {
 		if rl.IsMouseButtonPressed(.LEFT) {
-			// Calculate which texture was clicked
-			for i := 0; i < len(editor_state.textures); i += 1 {
-				pos_y := i32(10 + i * (int(editor_state.tile_preview_size) + 10))
-
-				// Check if click was within this texture's bounds
-				if mouse_pos.y >= f32(pos_y) &&
-				   mouse_pos.y < f32(pos_y + editor_state.tile_preview_size) {
-					editor_state.selected_texture = i
-
-					editor_state.tile_placement_size =
-						rl.LoadTexture(editor_state.texture_names[editor_state.selected_texture]).width
-					break
-				}
+			if mouse_pos.y >= f32(10) &&
+			   mouse_pos.y < f32(10 + editor_state.geometry_preview_size.y) {
+				editor_state.selected_geometry = 0
 			}
 		}
 	} else {
-		// Handle placing textures in the world
-		if editor_state.selected_texture >= 0 && rl.IsMouseButtonPressed(.LEFT) {
-			editor_state.tile_placement_size =
-				rl.LoadTexture(editor_state.texture_names[editor_state.selected_texture]).width
-			// Grid snap the placement position
-			grid_x :=
-				i32((mouse_pos.x / f32(editor_state.tile_placement_size))) *
-				editor_state.tile_placement_size
-			grid_y :=
-				i32((mouse_pos.y / f32(editor_state.tile_placement_size))) *
-				editor_state.tile_placement_size
+		// Handle placing rectangles in the world
+		if editor_state.selected_geometry >= 0 && rl.IsMouseButtonPressed(.LEFT) {
+			world_pos := get_cursor_world_pos(camera)
 
-			// TODO: Store the placed tile in your level data structure
-			// This is where you'd add the tile to your level data
-			// add json to write to level file
+			new_entity := Entity {
+				position = world_pos,
+				size     = editor_state.geometry_placement_size,
+			}
+			append(&level.entities, new_entity)
+		}
+	}
 
-			append(
-				&level.entities,
-				Entity {
-					editor_state.texture_names[editor_state.selected_texture],
-					{f32(grid_x), f32(grid_y)},
-				},
-			)
-			fmt.printf(
-				"Placed texture %s at grid position (%d, %d)\n",
-				editor_state.texture_names[editor_state.selected_texture],
-				grid_x,
-				grid_y,
-			)
+	// Handle deletion with right click
+	if rl.IsMouseButtonPressed(.RIGHT) && mouse_screen_x > 0 {
+		world_pos := get_cursor_world_pos(camera)
+
+		for i := len(level.entities) - 1; i >= 0; i -= 1 {
+			entity := level.entities[i]
+
+			if world_pos.x >= entity.position.x &&
+			   world_pos.x <= entity.position.x + entity.size.x &&
+			   world_pos.y >= entity.position.y &&
+			   world_pos.y <= entity.position.y + entity.size.y {
+				unordered_remove(&level.entities, i)
+				break
+			}
 		}
 	}
 }
 
-draw_editor_preview :: proc() {
-	// Draw preview of selected texture at mouse position if one is selected
-	if editor_state.selected_texture > 0 {
+draw_editor_preview :: proc(camera: ^rl.Camera2D) {
+	if !edit_mode do return
+
+	if editor_state.selected_geometry >= 0 {
 		mouse_pos := rl.GetMousePosition()
-
-		// Only show preview when mouse is in the game area
 		if mouse_pos.x >= f32(editor_state.sidebar_width) {
-			// Grid snap the preview position
-			grid_x :=
-				i32((mouse_pos.x / f32(editor_state.tile_placement_size))) *
-				editor_state.tile_placement_size
-			grid_y :=
-				i32((mouse_pos.y / f32(editor_state.tile_placement_size))) *
-				editor_state.tile_placement_size
+			world_pos := get_cursor_world_pos(camera)
 
-			// Draw semi-transparent preview
-			texture := editor_state.textures[editor_state.selected_texture]
-			rl.DrawTexturePro(
-				texture,
-				rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)},
-				rl.Rectangle {
-					f32(grid_x),
-					f32(grid_y),
-					f32(editor_state.tile_placement_size),
-					f32(editor_state.tile_placement_size),
-				},
-				rl.Vector2{0, 0},
-				0,
-				rl.ColorAlpha(rl.WHITE, 0.5),
+			// Draw semi-transparent preview rectangle at cursor position
+			preview_rect := rl.Rectangle {
+				x      = world_pos.x,
+				y      = world_pos.y,
+				width  = editor_state.geometry_placement_size.x,
+				height = editor_state.geometry_placement_size.y,
+			}
+
+			// Convert world space rectangle to screen space for drawing
+			screen_rect := rl.GetWorldToScreen2D({preview_rect.x, preview_rect.y}, camera^)
+			rl.DrawRectangle(
+				i32(world_pos.x),
+				i32(world_pos.y),
+				i32(preview_rect.width * camera.zoom),
+				i32(preview_rect.height * camera.zoom),
+				rl.ColorAlpha(rl.RED, 0.5),
 			)
 		}
 	}
 }
 
-editor_mode :: proc() {
-	if rl.IsKeyPressed(.F2) {
-		edit_mode = !edit_mode
-	}
+draw_level :: proc(camera: ^rl.Camera2D) {
+	rl.DrawTexture(level_background, 0, 0, rl.WHITE)
 
-	if edit_mode {
+	for entity in level.entities {
+		// Convert world position to screen position
+		screen_pos := rl.GetWorldToScreen2D(entity.position, camera^)
 
-		rl.DrawText("Edit Mode", 500, 100, 80, rl.RED)
-		draw_editor_sidebar()
-		handle_editor_input()
-		draw_editor_preview()
+		rl.DrawRectangle(
+			i32(entity.position.x),
+			i32(entity.position.y),
+			i32(entity.size.x * camera.zoom),
+			i32(entity.size.y * camera.zoom),
+			rl.RED,
+		)
 	}
 }
+
 
 write_level :: proc() {
 	if level_data, err := json.marshal(level); err == nil {
@@ -220,6 +177,7 @@ write_level :: proc() {
 
 load_level :: proc() {
 
+	level_background = rl.LoadTexture("./assets/level_1.png")
 	if level_data, ok := os.read_entire_file("level.json"); ok {
 		if json.unmarshal(level_data, &level) != nil {
 			// return if something went wrong 
@@ -240,16 +198,20 @@ load_level :: proc() {
 
 }
 
-draw_level :: proc() {
-	for ent in level.entities {
-		rl.DrawTexture(
-			rl.LoadTexture(ent.name),
-			i32(ent.position.x),
-			i32(ent.position.y),
-			rl.WHITE,
-		)
+
+editor_mode :: proc(camera: ^rl.Camera2D) {
+	if rl.IsKeyPressed(.F2) {
+		edit_mode = !edit_mode
 	}
 
+	if edit_mode {
+		camera.zoom = 1.0
 
+		rl.DrawText("Edit Mode", 500, 100, 80, rl.RED)
+		draw_editor_sidebar(&camera^)
+		handle_editor_input(&camera^)
+		draw_editor_preview(&camera^)
+	} else {
+		camera.zoom = 4.0
+	}
 }
-
