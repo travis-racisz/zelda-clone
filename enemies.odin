@@ -263,6 +263,53 @@ find_path :: proc(start: rl.Vector2, end: rl.Vector2, level_data: Level) -> [dyn
 
 		}
 
+
+		closed_set[current_node.position] = current_node
+
+
+		// explore neighbors 
+		for neighbor in get_neighbors(current_node.position, level_data) {
+			if _, ok := closed_set[neighbor]; ok {
+				continue // skip nodes in the closed_set
+
+			}
+
+		}
+
 	}
+
+}
+
+
+get_neighbors :: proc(pos: rl.Vector2, level_data: ^Level) -> [dynamic]rl.Vector2 {
+	neighbors := make([dynamic]rl.Vector2)
+	for x := int(pos.x - 1); x <= int(pos.x + 1); x += 1 {
+		for y := int(pos.y - 1); y <= int(pos.y + 1); y += 1 {
+			if (x != int(pos.x) || y != int(pos.y) {
+				if !is_blocked(rl.Vector2 {f32(x), f32(y)}, level_data) do 
+					append(&neighbors.rl.Vector2{f32(x), f32(y)})
+				
+			}
+		}
+	}
+}
+
+
+is_blocked :: proc(pos: rl.Vector2, level_data: ^Level) -> bool {
+	// Check if the position is blocked by any level geometry
+	for entity in level_data.entities {
+		if rl.CheckCollisionPointRec(
+			pos,
+			rl.Rectangle {
+				x = entity.position.x,
+				y = entity.position.y,
+				width = entity.size.x,
+				height = entity.size.y,
+			},
+		) {
+			return true
+		}
+	}
+	return false
 
 }
