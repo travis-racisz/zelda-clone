@@ -1,11 +1,21 @@
 package main
 import "core:fmt"
+import "core:math/rand"
+import "core:slice"
 import rl "vendor:raylib"
 
 // can use the animation struct from the e 
 Aggro_Range :: struct {
 	radius:   f32,
 	position: rl.Vector2,
+}
+
+Node :: struct {
+	position: rl.Vector2,
+	parent:   ^Node,
+	h_const:  f32,
+	g_const:  f32,
+	f_const:  f32,
 }
 
 Enemy :: struct {
@@ -171,12 +181,87 @@ draw_enemies :: proc(enemies: ^[]Enemy, animations: map[Animation_State]Animatio
 			source.width = f32(frame_width)
 		}
 		rl.DrawCircle(
-			i32(e.aggro_range.position.x),
-			i32(e.aggro_range.position.y),
+			i32(i32(e.position.x) + i32(frame_height)),
+			i32(i32(e.position.y) + i32(frame_width)),
 			e.aggro_range.radius,
-			rl.RED,
+			rl.ColorAlpha(rl.RED, 0.3),
 		)
 		rl.DrawTexturePro(e.sprite_sheet, source, dest, rl.Vector2{0, 0}, 0.0, rl.WHITE)
+
+	}
+
+}
+
+
+state_machine :: proc(enemies: [dynamic]^Enemy) {
+	// if idle, wander around from original position to random position within a range 
+	for e in enemies {
+
+		starting_pos := e.position
+		wander_range := rl.Vector2 {
+			e.position.x + (rand.float32() * 100.0),
+			e.position.y + (rand.float32() * 100.0),
+		}
+
+	}
+
+}
+
+
+// ----------------------------------------------------
+// Path Finding 
+// ----------------------------------------------------
+
+
+// compares nodes and returns true if second nodes f value is greater than a 
+// we want to follow the lowest f value 
+compare_nodes :: proc(a, b: ^Node) -> bool {
+	return a.f_const < b.f_const
+}
+
+
+find_path :: proc(start: rl.Vector2, end: rl.Vector2, level_data: Level) -> [dynamic]rl.Vector2 {
+
+	// allocate memory for the the open_set of nodes 
+	open_set := make([dynamic]^Node, 0, context.allocator)
+	// a list of already explored locations, to avoid revisiting the same locations 
+	closed_set := make(map[rl.Vector2]^Node, 0, context.allocator)
+
+
+	//create the start node 
+	start_node := &Node {
+		position = start,
+		g_const = 0,
+		h_const = rl.Vector2Distance(start, end),
+		f_const = rl.Vector2Distance(start, end),
+	}
+
+
+	append(&open_set, start_node)
+
+	// make the start node as already visited 
+	closed_set[start] = start_node
+
+
+	for len(open_set) > 0 {
+		// get the node with the lowest f score 
+		current_node := pop(&open_set)
+
+
+		// check if we are at the end location 
+		if rl.Vector2Distance(current_node.position, end) < 0.1 {
+			path := make([dynamic]rl.Vector2)
+			node := current_node
+			for node != nil {
+				append(&path, node.position)
+				node = node.parent
+			}
+
+			slice.reverse(path[:])
+			return path
+
+
+		}
 
 	}
 

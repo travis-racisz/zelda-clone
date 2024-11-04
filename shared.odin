@@ -1,5 +1,5 @@
 package main
-
+import "core:mem"
 Animation_State :: enum {
 	IDLE,
 	WALK_NORTH,
@@ -28,10 +28,4 @@ Animation :: struct {
 }
 
 
-
-
-
-
-
-
-
+track: mem.Tracking_Allocator

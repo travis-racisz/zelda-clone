@@ -1,4 +1,6 @@
 package main
+import "base:builtin"
+import "core:c/libc"
 import "core:encoding/json"
 import "core:fmt"
 import "core:os"
@@ -31,8 +33,8 @@ init_editor :: proc() {
 	editor_state.geometry = make([dynamic]rl.Rectangle)
 	editor_state.selected_geometry = -1
 	editor_state.sidebar_width = 200
-	editor_state.geometry_preview_size = {64, 64}
-	editor_state.geometry_placement_size = {64, 64}
+	editor_state.geometry_preview_size = {15, 15}
+	editor_state.geometry_placement_size = {15, 15}
 }
 
 get_cursor_world_pos :: proc(camera: ^rl.Camera2D) -> rl.Vector2 {
@@ -64,14 +66,16 @@ draw_editor_sidebar :: proc(camera: ^rl.Camera2D) {
 		height = editor_state.geometry_preview_size.y,
 	}
 
-	if len(editor_state.geometry) == 0 {
-		append(&editor_state.geometry, preview_rect)
-	}
+	// increment size on wheel scroll 
 
-	for geo, i in editor_state.geometry {
-		color := i == editor_state.selected_geometry ? rl.RED : rl.DARKGRAY
-		rl.DrawRectangleRec(geo, color)
-	}
+
+	rl.DrawRectangle(
+		i32(preview_rect.x),
+		i32(preview_rect.y),
+		i32(preview_rect.width),
+		i32(preview_rect.height),
+		rl.RED,
+	)
 }
 
 handle_editor_input :: proc(camera: ^rl.Camera2D) {
@@ -120,6 +124,7 @@ handle_editor_input :: proc(camera: ^rl.Camera2D) {
 }
 
 draw_editor_preview :: proc(camera: ^rl.Camera2D) {
+
 	if !edit_mode do return
 
 	if editor_state.selected_geometry >= 0 {
@@ -131,17 +136,35 @@ draw_editor_preview :: proc(camera: ^rl.Camera2D) {
 			preview_rect := rl.Rectangle {
 				x      = world_pos.x,
 				y      = world_pos.y,
-				width  = editor_state.geometry_placement_size.x,
-				height = editor_state.geometry_placement_size.y,
+				width  = editor_state.geometry_preview_size.x,
+				height = editor_state.geometry_preview_size.y,
 			}
+			mouse_wheel := rl.GetMouseWheelMove()
+			if (mouse_wheel > 0) {
 
+
+				scale_factor := 1.0 + (0.25 * libc.fabsf(mouse_wheel))
+				if (mouse_wheel < 0) do scale_factor = 1.0 / scale_factor
+				editor_state.geometry_preview_size.x += 1
+				editor_state.geometry_preview_size.y += 1
+				editor_state.geometry_placement_size.x += 1
+				editor_state.geometry_placement_size.y += 1
+
+			} else if (mouse_wheel < 0) {
+
+				editor_state.geometry_preview_size.x -= 1
+				editor_state.geometry_preview_size.y -= 1
+				editor_state.geometry_placement_size.x -= 1
+				editor_state.geometry_placement_size.y -= 1
+
+			}
 			// Convert world space rectangle to screen space for drawing
 			screen_rect := rl.GetWorldToScreen2D({preview_rect.x, preview_rect.y}, camera^)
 			rl.DrawRectangle(
 				i32(world_pos.x),
 				i32(world_pos.y),
-				i32(preview_rect.width * camera.zoom),
-				i32(preview_rect.height * camera.zoom),
+				i32(preview_rect.width),
+				i32(preview_rect.height),
 				rl.ColorAlpha(rl.RED, 0.5),
 			)
 		}
@@ -158,9 +181,9 @@ draw_level :: proc(camera: ^rl.Camera2D) {
 		rl.DrawRectangle(
 			i32(entity.position.x),
 			i32(entity.position.y),
-			i32(entity.size.x * camera.zoom),
-			i32(entity.size.y * camera.zoom),
-			rl.RED,
+			i32(entity.size.x),
+			i32(entity.size.y),
+			rl.BLANK,
 		)
 	}
 }
@@ -200,12 +223,20 @@ load_level :: proc() {
 
 
 editor_mode :: proc(camera: ^rl.Camera2D) {
+	if (rl.IsKeyPressed(.F3)) {
+		if camera.zoom == 1.0 {
+			camera.zoom = 4.0
+		} else {
+
+			camera.zoom = 1.0
+		}
+	}
+
 	if rl.IsKeyPressed(.F2) {
 		edit_mode = !edit_mode
 	}
 
 	if edit_mode {
-		camera.zoom = 1.0
 
 		rl.DrawText("Edit Mode", 500, 100, 80, rl.RED)
 		draw_editor_sidebar(&camera^)
@@ -213,5 +244,67 @@ editor_mode :: proc(camera: ^rl.Camera2D) {
 		draw_editor_preview(&camera^)
 	} else {
 		camera.zoom = 4.0
+	}
+}
+
+check_collisions :: proc(entities: [dynamic]Entity, player: ^Player) {
+	player_rect := rl.Rectangle {
+		x      = player.position.x,
+		y      = player.position.y,
+		width  = f32(player.sprite_sheet.width / player.sprite_cols),
+		height = f32(player.sprite_sheet.height / player.sprite_rows),
+	}
+
+	rl.DrawRectangle(
+		i32(player_rect.x),
+		i32(player_rect.y),
+		i32(player_rect.width),
+		i32(player_rect.height),
+		rl.BLANK,
+	)
+
+	for entity in entities {
+		entity_rect := rl.Rectangle {
+			x      = entity.position.x,
+			y      = entity.position.y,
+			width  = entity.size.x,
+			height = entity.size.y,
+		}
+		rl.DrawRectangle(
+			i32(entity.position.x),
+			i32(entity.position.y),
+			i32(entity.size.x),
+			i32(entity.size.y),
+			rl.BLANK,
+		)
+
+		if rl.CheckCollisionRecs(player_rect, entity_rect) {
+			// Calculate collision depths on each axis
+			overlap_x := min(
+				player_rect.x + player_rect.width - entity_rect.x,
+				entity_rect.x + entity_rect.width - player_rect.x,
+			)
+			overlap_y := min(
+				player_rect.y + player_rect.height - entity_rect.y,
+				entity_rect.y + entity_rect.height - player_rect.y,
+			)
+
+			// Resolve collision by pushing back the player along the axis of least penetration
+			if overlap_x < overlap_y {
+				// Horizontal collision
+				if player_rect.x < entity_rect.x {
+					player.position.x = entity_rect.x - player_rect.width
+				} else {
+					player.position.x = entity_rect.x + entity_rect.width
+				}
+			} else {
+				// Vertical collision
+				if player_rect.y < entity_rect.y {
+					player.position.y = entity_rect.y - player_rect.height
+				} else {
+					player.position.y = entity_rect.y + entity_rect.height
+				}
+			}
+		}
 	}
 }

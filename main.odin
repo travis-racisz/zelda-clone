@@ -53,6 +53,7 @@ game_update :: proc(
 	update_camera(player, camera)
 	draw_player(player^, animations)
 	draw_enemies(enemies, enemy_animations)
+	check_collisions(level.entities, player)
 	update_player(player, animations)
 	update_enemies(enemies^, enemy_animations)
 	return !rl.WindowShouldClose()
