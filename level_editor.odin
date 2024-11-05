@@ -172,12 +172,42 @@ draw_editor_preview :: proc(camera: ^rl.Camera2D) {
 }
 
 draw_level :: proc(camera: ^rl.Camera2D) {
+	// Draw the background first
 	rl.DrawTexture(level_background, 0, 0, rl.WHITE)
 
-	for entity in level.entities {
-		// Convert world position to screen position
-		screen_pos := rl.GetWorldToScreen2D(entity.position, camera^)
+	// Draw grid overlay
+	grid_size := rl.Vector2 {
+		editor_state.geometry_placement_size.x,
+		editor_state.geometry_placement_size.y,
+	}
 
+	// Calculate grid boundaries based on screen size and camera
+	screen_min := rl.GetScreenToWorld2D(rl.Vector2{0, 0}, camera^)
+	screen_max := rl.GetScreenToWorld2D(
+		rl.Vector2{f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())},
+		camera^,
+	)
+
+	// Draw vertical lines
+	for x := f32(int(screen_min.x / grid_size.x) * int(grid_size.x));
+	    x < screen_max.x;
+	    x += grid_size.x {
+		start_pos := rl.Vector2{x, screen_min.y}
+		end_pos := rl.Vector2{x, screen_max.y}
+		rl.DrawLineV(start_pos, end_pos, rl.ColorAlpha(rl.WHITE, 0.5))
+	}
+
+	// Draw horizontal lines
+	for y := f32(int(screen_min.y / grid_size.y) * int(grid_size.y));
+	    y < screen_max.y;
+	    y += grid_size.y {
+		start_pos := rl.Vector2{screen_min.x, y}
+		end_pos := rl.Vector2{screen_max.x, y}
+		rl.DrawLineV(start_pos, end_pos, rl.ColorAlpha(rl.WHITE, 0.5))
+	}
+
+	// Draw entities
+	for entity in level.entities {
 		rl.DrawRectangle(
 			i32(entity.position.x),
 			i32(entity.position.y),
@@ -243,7 +273,7 @@ editor_mode :: proc(camera: ^rl.Camera2D) {
 		handle_editor_input(&camera^)
 		draw_editor_preview(&camera^)
 	} else {
-		camera.zoom = 4.0
+		camera.zoom = 1.0
 	}
 }
 

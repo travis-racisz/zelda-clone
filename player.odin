@@ -88,7 +88,7 @@ init_animations :: proc() -> map[Animation_State]Animation {
 
 init_player :: proc(sprite_sheet: rl.Texture2D) -> Player {
 	return Player {
-		position = rl.Vector2{100, 100},
+		position = rl.Vector2{1000, 800},
 		sprite_sheet = sprite_sheet,
 		current_state = .IDLE,
 		direction = .SOUTH,
