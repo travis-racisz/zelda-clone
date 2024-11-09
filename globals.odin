@@ -22,7 +22,7 @@ cleanup_game :: proc() {
 
 game_update :: proc(
 	player: ^Player,
-	enemies: [dynamic]Enemy,
+	enemies: ^[dynamic]Enemy,
 	animations: map[Animation_State]Animation,
 	enemy_animations: map[EnemyState]Animation,
 	camera: ^rl.Camera2D,

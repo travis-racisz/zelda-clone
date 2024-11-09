@@ -10,6 +10,7 @@ Animation_State :: enum {
 	ATTACK_SOUTH,
 	ATTACK_EAST,
 	ATTACK_WEST,
+	DEAD,
 }
 
 

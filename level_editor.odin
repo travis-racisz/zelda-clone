@@ -258,7 +258,7 @@ editor_mode :: proc(camera: ^rl.Camera2D) {
 			camera.zoom = 4.0
 		} else {
 
-			camera.zoom = 1.0
+			camera.zoom = 4.0
 		}
 	}
 
@@ -273,7 +273,7 @@ editor_mode :: proc(camera: ^rl.Camera2D) {
 		handle_editor_input(&camera^)
 		draw_editor_preview(&camera^)
 	} else {
-		camera.zoom = 1.0
+		camera.zoom = 4.0
 	}
 }
 

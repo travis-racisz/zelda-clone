@@ -63,7 +63,7 @@ main :: proc() {
 			draw_path_debug(&path_grid)
 		}
 		editor_mode(&camera)
-		game_update(&player, enemies, animations, enemy_animations, &camera, dt)
+		game_update(&player, &enemies, animations, enemy_animations, &camera, dt)
 	}
 
 }

@@ -16,6 +16,6 @@ init_camera :: proc(player: Player) -> rl.Camera2D {
 		{f32(rl.GetScreenWidth() / 2), f32(rl.GetScreenHeight()) / 2},
 		{player.position.x, player.position.y},
 		0.0,
-		1.0,
+		4.0,
 	}
 }
