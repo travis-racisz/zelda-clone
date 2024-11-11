@@ -76,9 +76,16 @@ init_screen_manager :: proc() {
 
 change_screen :: proc(new_screen: Screen_Type) {
 	if new_screen != screen_manager.current_screen {
-		// Unload current screen
-		if screen, ok := screen_manager.screens[screen_manager.current_screen]; ok {
-			screen.unload()
+		old_screen := screen_manager.current_screen
+
+		// Only unload if we're not just pausing/unpausing
+		should_unload := !((old_screen == .Game && new_screen == .Pause) ||
+			(old_screen == .Pause && new_screen == .Game))
+
+		if should_unload {
+			if screen, ok := screen_manager.screens[screen_manager.current_screen]; ok {
+				screen.unload()
+			}
 		}
 
 		screen_manager.previous_screen = screen_manager.current_screen
@@ -98,20 +105,21 @@ update_screen_manager :: proc(dt: f32) {
 }
 
 draw_screen_manager :: proc() {
+
 	if screen, ok := screen_manager.screens[screen_manager.current_screen]; ok {
 		screen.draw()
 	}
 
 	// Draw transition effect if needed
-	if screen_manager.transitioning {
-		rl.DrawRectangle(
-			0,
-			0,
-			rl.GetScreenWidth(),
-			rl.GetScreenHeight(),
-			rl.ColorAlpha(rl.BLACK, screen_manager.transition_alpha),
-		)
-	}
+	//	if screen_manager.transitioning {
+	//		rl.DrawRectangle(
+	//			0,
+	//			0,
+	//			rl.GetScreenWidth(),
+	//			rl.GetScreenHeight(),
+	//			rl.ColorAlpha(rl.BLACK, screen_manager.transition_alpha),
+	//		)
+	//	}
 }
 
 cleanup_screen_manager :: proc() {
@@ -122,7 +130,6 @@ cleanup_screen_manager :: proc() {
 	delete(screen_manager.screens)
 }
 
-// Example screen implementations (you'll need to implement these)
 title_screen_init :: proc() {
 	// Initialize title screen resources
 }

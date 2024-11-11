@@ -3,9 +3,8 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-camera: rl.Camera2D
 
-update_camera :: proc(player: ^Player, camera: ^rl.Camera2D) {
+update_camera :: proc(player: Player, camera: ^rl.Camera2D) {
 	camera.target = player.position
 
 }

@@ -330,9 +330,7 @@ check_if_hit :: proc(player: ^Player, enemies: [dynamic]Enemy) {
 			if enemy.direction == .NORTH {
 				direction := rl.Vector2{0, -10}
 
-				// Normalize the direction vector
 				direction = rl.Vector2Normalize(direction)
-				// Apply knockback force
 				player.knockback_velocity = direction * KNOCKBACK_FORCE
 				return
 			}
@@ -340,9 +338,7 @@ check_if_hit :: proc(player: ^Player, enemies: [dynamic]Enemy) {
 			if enemy.direction == .SOUTH {
 
 				direction := rl.Vector2{0, 10}
-				// Normalize the direction vector
 				direction = rl.Vector2Normalize(direction)
-				// Apply knockback force
 				player.knockback_velocity = direction * KNOCKBACK_FORCE
 				return
 			}
@@ -350,9 +346,7 @@ check_if_hit :: proc(player: ^Player, enemies: [dynamic]Enemy) {
 			if enemy.direction == .EAST {
 				direction := rl.Vector2{10, 0}
 
-				// Normalize the direction vector
 				direction = rl.Vector2Normalize(direction)
-				// Apply knockback force
 				player.knockback_velocity = direction * KNOCKBACK_FORCE
 				return
 			}
@@ -360,9 +354,7 @@ check_if_hit :: proc(player: ^Player, enemies: [dynamic]Enemy) {
 			if enemy.direction == .WEST {
 				direction := rl.Vector2{-10, 0}
 
-				// Normalize the direction vector
 				direction = rl.Vector2Normalize(direction)
-				// Apply knockback force
 				player.knockback_velocity = direction * KNOCKBACK_FORCE
 				return
 			}

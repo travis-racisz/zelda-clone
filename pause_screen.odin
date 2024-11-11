@@ -12,18 +12,23 @@ Pause_Menu_Option :: enum {
 
 Pause_State :: struct {
 	selected_option:  Pause_Menu_Option,
-	menu_options:     []string,
+	menu_options:     [3]string,
 	menu_rect:        rl.Rectangle,
 	option_height:    f32,
 	background_alpha: f32,
+	initialized:      bool,
 }
 
 pause_state: Pause_State
 
 pause_screen_init :: proc() {
+
+	// Create menu options with proper allocation
+	options := [3]string{strings.clone("Resume"), strings.clone("Restart"), strings.clone("Quit")}
+
 	pause_state = Pause_State {
 		selected_option = .Resume,
-		menu_options = []string{"Resume", "Restart", "Quit"},
+		menu_options = options,
 		menu_rect = rl.Rectangle {
 			x = f32(rl.GetScreenWidth()) / 2 - 150,
 			y = f32(rl.GetScreenHeight()) / 2 - 150,
@@ -32,7 +37,9 @@ pause_screen_init :: proc() {
 		},
 		option_height = 60,
 		background_alpha = 0.7,
+		initialized = true,
 	}
+
 }
 
 pause_screen_update :: proc(dt: f32) {
@@ -63,7 +70,6 @@ pause_screen_update :: proc(dt: f32) {
 		case .Resume:
 			change_screen(.Game)
 		case .Restart:
-			// First change to title screen, which will then start a new game
 			change_screen(.Title)
 		case .Quit:
 			rl.CloseWindow()
@@ -77,12 +83,7 @@ pause_screen_update :: proc(dt: f32) {
 }
 
 pause_screen_draw :: proc() {
-	// Draw the game screen in the background (slightly darkened)
-	if screen, ok := screen_manager.screens[.Game]; ok {
-		screen.draw()
-	}
-
-	// Draw semi-transparent background
+	// Draw darkened overlay
 	rl.DrawRectangle(
 		0,
 		0,
@@ -139,5 +140,5 @@ pause_screen_draw :: proc() {
 }
 
 pause_screen_unload :: proc() {
-	// No resources to unload for pause screen
+	// No resources to unload
 }

@@ -27,6 +27,3 @@ Animation :: struct {
 	frame_speed:  i32,
 	blocks_input: bool, // Whether the animation should block other inputs 
 }
-
-
-track: mem.Tracking_Allocator
