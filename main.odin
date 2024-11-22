@@ -4,6 +4,18 @@ import "core:fmt"
 import "core:mem"
 import rl "vendor:raylib"
 
+
+// -----------------------------------------
+// TODO: get editor working correctly again 
+// add in new type of collision rect that will change the level by loading a load screen, unloading all of the assets and loading in the new assets 
+// set up collision rects for level 2 
+// add in a new mechanic, grappling hook
+// add boss 
+// add in win screen 
+// redo game over screen 
+// GAME IS DONE 
+// -----------------------------------------
+
 main :: proc() {
 
 	when ODIN_DEBUG {

@@ -226,7 +226,16 @@ write_level :: proc() {
 
 }
 
-load_level :: proc() {
+load_level :: proc(current_level: Levels) {
+
+
+	switch current_level {
+
+	case .HOMETOWN:
+		break
+	case .CAVE:
+		break
+	}
 
 	level_background = rl.LoadTexture("./assets/level_1.png")
 	if level_data, ok := os.read_entire_file("level.json"); ok {

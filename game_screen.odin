@@ -52,7 +52,7 @@ game_screen_init :: proc() {
 			game_state.current_level = .HOMETOWN
 
 			init_game()
-			load_level()
+			load_level(game_state.current_level)
 
 			os.remove("./save_game.json")
 			create_save_file()
@@ -66,13 +66,13 @@ game_screen_init :: proc() {
 				game_state.player = init_player(game_state.player_sprite)
 				game_state.camera = init_camera(game_state.player)
 
-				load_level()
+				load_level(game_state.current_level)
 				// load_save_file()
 				if !load_save_file() {
 					// Handle load failure - could revert to new game or show error
 					fmt.println("Failed to load save file, starting new game")
 					init_game()
-					load_level()
+					load_level(game_state.current_level)
 				}
 
 			}
