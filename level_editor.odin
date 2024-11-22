@@ -57,18 +57,16 @@ get_cursor_world_pos :: proc(camera: ^rl.Camera2D) -> rl.Vector2 {
 draw_editor_sidebar :: proc(camera: ^rl.Camera2D) {
 	posX := i32(camera.target.x) - rl.GetScreenWidth() / 2
 	posY := i32(camera.target.y) - rl.GetScreenHeight() / 2
-	rl.DrawRectangle(posX, posY, editor_state.sidebar_width, rl.GetScreenHeight(), rl.LIGHTGRAY)
+	rl.DrawRectangle(0, 0, editor_state.sidebar_width, rl.GetScreenHeight(), rl.LIGHTGRAY)
 
 	preview_rect := rl.Rectangle {
-		x      = f32(posX + 10),
-		y      = f32(posY + 10),
+		x      = 20,
+		y      = 20,
 		width  = editor_state.geometry_preview_size.x,
 		height = editor_state.geometry_preview_size.y,
 	}
 
 	// increment size on wheel scroll 
-
-
 	rl.DrawRectangle(
 		i32(preview_rect.x),
 		i32(preview_rect.y),
@@ -254,8 +252,8 @@ load_level :: proc() {
 
 editor_mode :: proc(camera: ^rl.Camera2D) {
 	if (rl.IsKeyPressed(.F3)) {
-		if camera.zoom == 1.0 {
-			camera.zoom = 4.0
+		if camera.zoom == 4.0 {
+			camera.zoom = 1.0
 		} else {
 
 			camera.zoom = 4.0

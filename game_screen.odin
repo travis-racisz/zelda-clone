@@ -1,6 +1,8 @@
 package main
 
+import "core:encoding/json"
 import "core:fmt"
+import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -21,36 +23,144 @@ GameState :: struct {
 	current_level:    Levels,
 }
 
+SaveData :: struct {
+	// Game state data
+	player_position: rl.Vector2,
+	player_health:   int,
+	current_level:   Levels,
+
+	// Enemy data
+	enemy_positions: []rl.Vector2,
+}
+
+
 game_state: GameState
 
 enemies: [dynamic]Enemy
 path_grid: Path_Grid
 
 game_screen_init :: proc() {
-	// Only initialize if we haven't already
 	if !game_state.initialized {
-		fmt.println("Initializing new game state...")
-
-		// init game resources 
+		// Initialize common resources regardless of new/load game
 		game_state.player_sprite = rl.LoadTexture("./assets/Player/Player.png")
-		game_state.player = init_player(game_state.player_sprite)
-		game_state.camera = init_camera(game_state.player)
 		game_state.animations = init_animations()
 		game_state.enemy_animations = init_enemy_animations()
-
-		// init level and editor mode 
 		init_editor()
-		init_game()
+		if title_screen_state.selected_option == .NewGame {
+			game_state.player = init_player(game_state.player_sprite)
+			game_state.camera = init_camera(game_state.player)
+			game_state.current_level = .HOMETOWN
+
+			init_game()
+			load_level()
+
+			os.remove("./save_game.json")
+			create_save_file()
+			fmt.print(title_screen_state.selected_option)
+			fmt.print("creating new save file ")
+		} else if title_screen_state.selected_option == .LoadGame {
+			fmt.print("loading game")
+			// Initialize base player and camera
+			if check_save_exists() {
+
+				game_state.player = init_player(game_state.player_sprite)
+				game_state.camera = init_camera(game_state.player)
+
+				load_level()
+				// load_save_file()
+				if !load_save_file() {
+					// Handle load failure - could revert to new game or show error
+					fmt.println("Failed to load save file, starting new game")
+					init_game()
+					load_level()
+				}
+
+			}
+		}
 
 		game_state.initialized = true
 	} else {
 		fmt.println("Resuming existing game state...")
 	}
 }
+
+create_save_file :: proc() -> bool {
+	// Create save data structure
+	save_data := SaveData {
+		player_position = game_state.player.position,
+		player_health   = game_state.player.hp,
+		current_level   = game_state.current_level,
+		enemy_positions = make([]rl.Vector2, len(enemies)),
+	}
+
+	// Populate enemy data
+	for enemy, i in enemies {
+		save_data.enemy_positions[i] = enemy.position
+	}
+
+	// Serialize to JSON
+	data, err := json.marshal(save_data)
+	if err != nil {
+		fmt.eprintln("Error marshaling save data:", err)
+		return false
+	}
+
+	// Write to file
+	if os.write_entire_file("save_game.json", data) {
+		fmt.println("Game saved successfully")
+		return true
+	} else {
+		fmt.eprintln("Error writing save file")
+		return false
+	}
+}
+
+load_save_file :: proc() -> bool {
+	data, ok := os.read_entire_file("save_game.json")
+	if !ok {
+		fmt.eprintln("Could not read save file")
+		return false
+	}
+
+	save_data: SaveData
+	if err := json.unmarshal(data, &save_data); err != nil {
+		fmt.eprintln("Error unmarshaling save data:", err)
+		return false
+	}
+
+	// Restore game state
+	game_state.player.position = save_data.player_position
+	game_state.player.hp = save_data.player_health
+	game_state.current_level = save_data.current_level
+
+	// Restore enemies
+	clear(&enemies)
+	for pos, i in save_data.enemy_positions {
+		enemy := init_enemy(pos)
+		append(&enemies, enemy)
+	}
+
+	return true
+}
+
+check_save_exists :: proc() -> bool {
+	when ODIN_OS == .Windows {
+		file_handle := os.open("save_game.json")
+		if file_handle == os.INVALID_HANDLE {
+			return false
+		}
+		os.close(file_handle)
+		return true
+	} else {
+		return os.exists("save_game.json")
+	}
+}
+
+
 game_screen_update :: proc(dt: f32) {
 	game_state.dt = dt
 
-	if rl.IsKeyPressed(.P) {
+	if rl.IsKeyPressed(.ESCAPE) {
 		change_screen(.Pause)
 		return
 
@@ -75,7 +185,6 @@ game_screen_draw :: proc() {
 
 	rl.BeginMode2D(game_state.camera)
 	{
-		draw_game_ui()
 		draw_level(&game_state.camera)
 		draw_player(game_state.player, game_state.animations)
 		draw_game(game_state.enemy_animations)
@@ -83,6 +192,10 @@ game_screen_draw :: proc() {
 	}
 
 	rl.EndMode2D()
+
+	if edit_mode {
+		draw_editor_sidebar(&game_state.camera)
+	}
 }
 
 
@@ -133,17 +246,13 @@ draw_game_ui :: proc() {
 		health_bar_height,
 		rl.RED,
 	)
+	cstr := strings.clone_to_cstring(fmt.tprintf("Health: %d%%", int(game_state.player.hp)))
 
 	// Draw health text
-	rl.DrawText(
-		strings.clone_to_cstring(fmt.tprintf("Health: %d%%", int(game_state.player.hp))),
-		health_bar_x + 5,
-		health_bar_y + 2,
-		16,
-		rl.WHITE,
-	)
+	rl.DrawText(cstr, health_bar_x + 5, health_bar_y + 2, 16, rl.WHITE)
 
 	// Draw debug info if enabled
+	defer delete(cstr)
 }
 
 
@@ -171,6 +280,7 @@ game_update :: proc(
 ) {
 	// draw(camera^)
 	// draw_level(camera)
+	editor_mode(camera)
 	check_collisions(level.entities, player)
 	update_camera(player^, camera)
 	update_player(player, animations)

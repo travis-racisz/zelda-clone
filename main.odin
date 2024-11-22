@@ -28,18 +28,17 @@ main :: proc() {
 		}
 	}
 
-
 	rl.InitWindow(1920, 1080, "ZeldaClone")
 	rl.SetTargetFPS(60)
-	defer rl.CloseWindow()
-
+	init_editor()
 	init_screen_manager()
 	defer cleanup_screen_manager()
+	defer save_game()
+	defer rl.CloseWindow()
 
-	load_level()
 	// defer write_level()
 
-	for !rl.WindowShouldClose() {
+	for !ExitGame {
 		dt := rl.GetFrameTime()
 
 		rl.BeginDrawing()
@@ -56,6 +55,6 @@ main :: proc() {
 save_game :: proc() {
 	// get all of the date required, such as all of the enemies, their positions, the player as well as the current level
 	// save to JSON file 
-
+	create_save_file()
 
 }

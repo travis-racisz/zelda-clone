@@ -129,35 +129,3 @@ cleanup_screen_manager :: proc() {
 	}
 	delete(screen_manager.screens)
 }
-
-title_screen_init :: proc() {
-	// Initialize title screen resources
-}
-
-title_screen_update :: proc(dt: f32) {
-	// Handle title screen input and logic
-	if rl.IsKeyPressed(.ENTER) {
-		change_screen(.Game)
-	}
-}
-
-title_screen_draw :: proc() {
-	rl.DrawText(
-		"ZELDA CLONE",
-		i32(rl.GetScreenWidth() / 2 - 100),
-		i32(rl.GetScreenHeight() / 2 - 30),
-		30,
-		rl.WHITE,
-	)
-	rl.DrawText(
-		"Press ENTER to start",
-		i32(rl.GetScreenWidth() / 2 - 110),
-		i32(rl.GetScreenHeight() / 2 + 20),
-		20,
-		rl.WHITE,
-	)
-}
-
-title_screen_unload :: proc() {
-	// Unload title screen resources
-}

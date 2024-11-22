@@ -32,7 +32,7 @@ pause_screen_init :: proc() {
 		menu_rect = rl.Rectangle {
 			x = f32(rl.GetScreenWidth()) / 2 - 150,
 			y = f32(rl.GetScreenHeight()) / 2 - 150,
-			width = 300,
+			width = 600,
 			height = 300,
 		},
 		option_height = 60,
@@ -72,7 +72,8 @@ pause_screen_update :: proc(dt: f32) {
 		case .Restart:
 			change_screen(.Title)
 		case .Quit:
-			rl.CloseWindow()
+			pause_screen_unload()
+			ExitGame = true
 		}
 	}
 
@@ -104,7 +105,7 @@ pause_screen_draw :: proc() {
 	for option, i in pause_state.menu_options {
 		pos_x := pause_state.menu_rect.x + 20
 		pos_y := pause_state.menu_rect.y + 100 + f32(i) * pause_state.option_height
-
+		temp_str := strings.clone_to_cstring(option)
 		// Draw selection indicator
 		if Pause_Menu_Option(i) == pause_state.selected_option {
 			rl.DrawRectangle(
@@ -114,31 +115,29 @@ pause_screen_draw :: proc() {
 				40,
 				rl.ColorAlpha(rl.WHITE, 0.2),
 			)
-			rl.DrawText(
-				strings.clone_to_cstring(option),
-				i32(pos_x + 20),
-				i32(pos_y),
-				30,
-				rl.YELLOW,
-			)
+			rl.DrawText(temp_str, i32(pos_x + 20), i32(pos_y), 30, rl.YELLOW)
 		} else {
-			rl.DrawText(
-				strings.clone_to_cstring(option),
-				i32(pos_x + 20),
-				i32(pos_y),
-				30,
-				rl.WHITE,
-			)
+			rl.DrawText(temp_str, i32(pos_x + 20), i32(pos_y), 30, rl.WHITE)
 		}
+		defer delete(temp_str)
 	}
 
 	// Draw controls hint
-	hint_text := "Use UP/DOWN arrows to navigate, ENTER to select"
+	hint_text := strings.clone_to_cstring("Use UP/DOWN arrows to navigate, ENTER to select")
 	hint_pos_x := i32(pause_state.menu_rect.x + 20)
 	hint_pos_y := i32(pause_state.menu_rect.y + pause_state.menu_rect.height - 30)
-	rl.DrawText(strings.clone_to_cstring(hint_text), hint_pos_x, hint_pos_y, 15, rl.LIGHTGRAY)
+	rl.DrawText(hint_text, hint_pos_x, hint_pos_y, 15, rl.LIGHTGRAY)
+	defer delete(hint_text)
 }
 
 pause_screen_unload :: proc() {
-	// No resources to unload
+	// Delete each string in the array
+	for &option in pause_state.menu_options {
+		if len(option) > 0 {
+			delete(option)
+			option = "" // Clear the string after deleting
+		}
+	}
+	// Reset the state
+	pause_state = Pause_State{}
 }
