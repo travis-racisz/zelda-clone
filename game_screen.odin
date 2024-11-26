@@ -187,15 +187,13 @@ game_screen_draw :: proc() {
 	{
 		draw_level(&game_state.camera)
 		draw_player(game_state.player, game_state.animations)
+		draw_game_ui()
 		draw_game(game_state.enemy_animations)
 
 	}
 
 	rl.EndMode2D()
 
-	if edit_mode {
-		draw_editor_sidebar(&game_state.camera)
-	}
 }
 
 
@@ -262,6 +260,8 @@ init_game :: proc() {
 	enemies = make([dynamic]Enemy)
 	append(&enemies, init_enemy(rl.Vector2{400, 400}))
 	append(&enemies, init_enemy(rl.Vector2{300, 300}))
+
+	//create exit square 
 }
 
 cleanup_game :: proc() {
@@ -280,7 +280,7 @@ game_update :: proc(
 ) {
 	// draw(camera^)
 	// draw_level(camera)
-	editor_mode(camera)
+	editor_mode(&game_state.camera)
 	check_collisions(level.entities, player)
 	update_camera(player^, camera)
 	update_player(player, animations)

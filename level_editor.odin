@@ -18,6 +18,12 @@ Editor_State :: struct {
 Entity :: struct {
 	position: rl.Vector2,
 	size:     rl.Vector2,
+	type:     EntityType,
+}
+
+EntityType :: enum {
+	WALL,
+	LEVELCHANGE,
 }
 
 Level :: struct {
@@ -159,8 +165,8 @@ draw_editor_preview :: proc(camera: ^rl.Camera2D) {
 			// Convert world space rectangle to screen space for drawing
 			screen_rect := rl.GetWorldToScreen2D({preview_rect.x, preview_rect.y}, camera^)
 			rl.DrawRectangle(
-				i32(world_pos.x),
-				i32(world_pos.y),
+				i32(screen_rect.x),
+				i32(screen_rect.y),
 				i32(preview_rect.width),
 				i32(preview_rect.height),
 				rl.ColorAlpha(rl.RED, 0.5),
@@ -273,15 +279,7 @@ editor_mode :: proc(camera: ^rl.Camera2D) {
 		edit_mode = !edit_mode
 	}
 
-	if edit_mode {
 
-		rl.DrawText("Edit Mode", 500, 100, 80, rl.RED)
-		draw_editor_sidebar(&camera^)
-		handle_editor_input(&camera^)
-		draw_editor_preview(&camera^)
-	} else {
-		camera.zoom = 4.0
-	}
 }
 
 check_collisions :: proc(entities: [dynamic]Entity, player: ^Player) {

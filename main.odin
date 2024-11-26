@@ -5,17 +5,6 @@ import "core:mem"
 import rl "vendor:raylib"
 
 
-// -----------------------------------------
-// TODO: get editor working correctly again 
-// add in new type of collision rect that will change the level by loading a load screen, unloading all of the assets and loading in the new assets 
-// set up collision rects for level 2 
-// add in a new mechanic, grappling hook
-// add boss 
-// add in win screen 
-// redo game over screen 
-// GAME IS DONE 
-// -----------------------------------------
-
 main :: proc() {
 
 	when ODIN_DEBUG {
@@ -39,7 +28,6 @@ main :: proc() {
 			mem.tracking_allocator_destroy(&track)
 		}
 	}
-
 	rl.InitWindow(1920, 1080, "ZeldaClone")
 	rl.SetTargetFPS(60)
 	init_editor()
@@ -48,19 +36,29 @@ main :: proc() {
 	defer save_game()
 	defer rl.CloseWindow()
 
-	// defer write_level()
 
 	for !ExitGame {
 		dt := rl.GetFrameTime()
 
 		rl.BeginDrawing()
 
-		{
-			update_screen_manager(dt)
-			draw_screen_manager()
+		if edit_mode {
+
+			rl.DrawText("Edit Mode", 500, 100, 80, rl.RED)
+			draw_editor_sidebar(&game_state.camera)
+			handle_editor_input(&game_state.camera)
+			draw_editor_preview(&game_state.camera)
+		} else {
+			game_state.camera.zoom = 4.0
 		}
+		update_screen_manager(dt)
+		draw_screen_manager()
 		rl.EndDrawing()
+
+
 	}
+
+
 }
 
 
